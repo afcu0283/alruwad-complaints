@@ -1,11 +1,7 @@
-from flask import Flask, render_template, request, redirect, url_for
-import uuid
-import datetime
+from flask import Flask, render_template, request, redirect
 
 app = Flask(__name__)
-complaints = {}
-admin_username = 'admin'
-admin_password = '123456'
+complaints = []
 
 @app.route('/')
 def home():
@@ -13,41 +9,21 @@ def home():
 
 @app.route('/submit', methods=['POST'])
 def submit():
-    name = request.form.get('name')
-    phone = request.form.get('phone')
-    message = request.form.get('message')
-    complaint_id = f"ruw{str(uuid.uuid4().int)[:4]}"
-    complaints[complaint_id] = {
-        'name': name,
-        'phone': phone,
-        'message': message,
-        'status': 'قيد المراجعة',
-        'time': str(datetime.datetime.now()),
-        'reply': ''
-    }
-    return render_template('submitted.html', complaint_id=complaint_id)
+    name = request.form['name']
+    phone = request.form['phone']
+    complaint = request.form['complaint']
+    complaints.append({'name': name, 'phone': phone, 'complaint': complaint})
+    return render_template('thanks.html', name=name)
 
-@app.route('/track', methods=['POST'])
+@app.route('/track', methods=['GET'])
 def track():
-    track_id = request.form.get('track_id')
-    complaint = complaints.get(track_id)
-    return render_template('track.html', complaint=complaint, track_id=track_id)
+    phone = request.args.get('phone')
+    found = [c for c in complaints if c['phone'] == phone]
+    return render_template('track.html', found=found, phone=phone)
 
-@app.route('/admin', methods=['GET', 'POST'])
+@app.route('/admin')
 def admin():
-    if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        if username == admin_username and password == admin_password:
-            return render_template('dashboard.html', complaints=complaints)
-        else:
-            return "بيانات الدخول غير صحيحة"
-    return render_template('admin_login.html')
+    return render_template('admin.html', complaints=complaints)
 
-@app.route('/reply/<complaint_id>', methods=['POST'])
-def reply(complaint_id):
-    reply_message = request.form.get('reply')
-    if complaint_id in complaints:
-        complaints[complaint_id]['reply'] = reply_message
-        complaints[complaint_id]['status'] = 'تم الرد'
-    return redirect(url_for('admin'))
+if __name__ == '__main__':
+    app.run(debug=True)
